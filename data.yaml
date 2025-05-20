@@ -1,0 +1,16 @@
+#path to test images
+test: /home/aiu-lambda2/Desktop/JMU-AIU-Object-Detection/Traffic-Dataset/images/test
+# path to train images
+train: /home/aiu-lambda2/Desktop/JMU-AIU-Object-Detection/Traffic-Dataset/images/train
+# path to validation images
+val: /home/aiu-lambda2/Desktop/JMU-AIU-Object-Detection/Traffic-Dataset/images/val
+# number of classes
+nc: 7
+names:
+  0: 'car'
+  1: 'Number Plate'
+  2: 'Blurred Number Plate'
+  3: 'Two Wheeler'
+  4: 'Auto'
+  5: 'Bus'
+  6: 'Truck'
