@@ -4,10 +4,6 @@ import os
 from collections import deque
 emotion_history = deque(maxlen=10)  # Store last 10 emotions.
 
-# If not using Python 3.11, restart the script with Python 3.11
-if "Python311" not in sys.executable:
-    python311_path = r"C:\Users\ranah\AppData\Local\Programs\Python\Python311\python.exe"
-    os.execv(python311_path, [python311_path] + sys.argv)
 
 import bz2
 import cv2
@@ -73,16 +69,23 @@ while True:
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     rects = detector(gray, 0)
 
-    # ========== Emotion Detection ==========
-    try:
-        result = DeepFace.analyze(frame, actions=['emotion'], enforce_detection=False)
-        emotion = result[0]['dominant_emotion']
-        emotion_history.append(emotion)
-        common_emotion = max(set(emotion_history), key=emotion_history.count)
-    except:
-        common_emotion = "Unknown"
-
     for rect in rects:
+        (x, y, w, h) = face_utils.rect_to_bb(rect)
+        face_img = frame[y:y+h, x:x+w]
+
+        # ========== Emotion Detection for each face ==========
+        try:
+            result = DeepFace.analyze(face_img, actions=['emotion'], enforce_detection=False)
+            emotion = result[0]['dominant_emotion']
+        except:
+            emotion = "Unknown"
+
+        # Draw bounding box and emotion label
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+        cv2.putText(frame, f"Emotion: {emotion}", (x, y-10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+
+        # Facial landmark detection and fatigue detection code for each face
         shape = predictor(gray, rect)
         shape = face_utils.shape_to_np(shape)
 
@@ -104,42 +107,40 @@ while True:
         nose_point = shape[33]
         if prev_y is not None and abs(prev_y - nose_point[1]) > NOD_THRESHOLD:
             nod_counter += 1
-            cv2.putText(frame, "⚠ Head Nodding!", (10, 150),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
+            # Draw warning near the face
+            cv2.putText(frame, "⚠ Head Nodding!", (x, y + h + 25),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
         prev_y = nose_point[1]
 
         # Drowsiness detection
         if ear < EAR_THRESHOLD:
             blink_counter += 1
             if blink_counter >= EAR_CONSEC_FRAMES:
-                cv2.putText(frame, "⚠ Drowsiness Detected!", (10, 70),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+                # Draw warning near the face
+                cv2.putText(frame, "⚠ Drowsiness Detected!", (x, y + h + 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         else:
             blink_counter = 0
 
         # Yawning detection
         if mar > MAR_THRESHOLD:
             yawn_counter += 1
-            cv2.putText(frame, "⚠ Yawning!", (10, 110),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 165, 255), 2)
+            cv2.putText(frame, "⚠ Yawning!", (x, y + h + 70),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 165, 255), 2)
 
         # Emotion correction (smart sad → neutral)
-        if common_emotion == "sad":
+        if emotion == "sad":
             if mar < 0.3 and ear > EAR_THRESHOLD:
                 neutral_like_sad += 1
             else:
                 neutral_like_sad = 0
 
             if neutral_like_sad >= 5:
-                common_emotion = "neutral"
+                emotion = "neutral"
 
         # Draw landmarks (optional)
         for (x, y) in shape:
             cv2.circle(frame, (x, y), 1, (0, 255, 0), -1)
-
-    # Show emotion label
-    cv2.putText(frame, f"Emotion: {common_emotion}", (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 255), 2)
 
     cv2.imshow("Driver Emotion & Fatigue Monitor", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
