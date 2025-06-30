@@ -27,7 +27,7 @@ import urllib.request
 model_path = "shape_predictor_68_face_landmarks.dat"
 compressed_model = model_path + ".bz2"
 if not os.path.exists(model_path):
-    print("Downloading shape_predictor_68_face_landmarks.dat...")
+    print("Downloading shape_predictor_68_face_landmarks.dat.....")
     url = "http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2"
     urllib.request.urlretrieve(url, compressed_model)
 
